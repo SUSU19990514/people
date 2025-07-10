@@ -1,0 +1,13 @@
+keep_fields:
+- 姓名
+- 部门
+- 职位
+- 入职日期
+- 薪资
+output_dir: output
+preserve_format: true
+sheet_name: Sheet1
+sort_fields:
+- 部门
+- 姓名
+split_field: 部门

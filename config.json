@@ -1,0 +1,17 @@
+{
+  "split_field": "部门",
+  "keep_fields": [
+    "姓名",
+    "部门",
+    "职位",
+    "入职日期",
+    "薪资"
+  ],
+  "sort_fields": [
+    "部门",
+    "姓名"
+  ],
+  "output_dir": "output",
+  "sheet_name": "Sheet1",
+  "preserve_format": true
+}
