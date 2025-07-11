@@ -31,12 +31,20 @@ if mode == "拆分大表为多个小表":
         wb = openpyxl.load_workbook(tmp_path, read_only=True)
         sheet_names = wb.sheetnames
         selected_sheets = st.multiselect("选择要参与拆分的工作表（可多选）", sheet_names, default=sheet_names)
-        # 读取第一个sheet的字段名做参数配置
-        df = pd.read_excel(tmp_path, sheet_name=sheet_names[0])
+        # 多sheet分别选择保留字段
+        keep_fields_dict = {}
+        for sheet in selected_sheets:
+            df_sheet = pd.read_excel(tmp_path, sheet_name=sheet)
+            all_columns = df_sheet.columns.tolist()
+            keep_fields_dict[sheet] = st.multiselect(f"{sheet}保留字段（可多选）", all_columns, default=all_columns, key=f"keep_{sheet}")
+        # 读取第一个被选中的sheet的字段名做参数配置
+        if selected_sheets:
+            df = pd.read_excel(tmp_path, sheet_name=selected_sheets[0])
+        else:
+            df = pd.DataFrame()
         st.dataframe(df.head(10))
         all_columns = df.columns.tolist()
         split_field = st.selectbox("选择拆分字段（每个唯一值生成一个Excel文件）", all_columns)
-        keep_fields = st.multiselect("保留字段（可多选）", all_columns, default=all_columns)
         sort_fields = st.multiselect("排序字段（可多选）", all_columns)
         preserve_format = st.checkbox("保留单元格格式", value=True)
         
@@ -158,7 +166,7 @@ if mode == "拆分大表为多个小表":
             with st.spinner("正在按拆分字段批量生成Excel..."):
                 config = ProcessingConfig(
                     split_field=split_field,
-                    keep_fields=keep_fields,
+                    keep_fields=keep_fields_dict, # 使用字典传递给ProcessingConfig
                     sort_fields=sort_fields,
                     output_dir="output",
                     sheet_name=None,
@@ -182,6 +190,8 @@ if mode == "拆分大表为多个小表":
                         # 为每个sheet处理该分组的所有值
                         for sheet in selected_sheets:
                             df = pd.read_excel(tmp_path, sheet_name=sheet)
+                            # 用各自sheet的保留字段
+                            keep_fields = keep_fields_dict.get(sheet, df.columns.tolist())
                             # 筛选该分组的所有值
                             subset = df[df[split_field].astype(str).isin(group_values)]
                             if subset.empty:
@@ -255,6 +265,7 @@ if mode == "拆分大表为多个小表":
                         new_wb.remove(new_wb.active)
                         for sheet in selected_sheets:
                             df = pd.read_excel(tmp_path, sheet_name=sheet)
+                            keep_fields = keep_fields_dict.get(sheet, df.columns.tolist())
                             subset = df[df[split_field] == value]
                             if subset.empty:
                                 continue
@@ -326,14 +337,18 @@ elif mode == "合并多个小表为大表":
             all_sheet_names = list(all_sheet_names)
             selected_sheets = st.multiselect("选择要合并的工作表（可多选）", all_sheet_names, default=all_sheet_names)
             all_columns = list(all_columns)
-            keep_fields = st.multiselect("保留字段（可多选）", all_columns, default=all_columns)
+            keep_fields_dict = {}
+            for sheet in selected_sheets:
+                df_sheet = pd.read_excel(file_paths[0], sheet_name=sheet) # 假设第一个文件的sheet结构代表所有文件
+                all_columns = df_sheet.columns.tolist()
+                keep_fields_dict[sheet] = st.multiselect(f"{sheet}保留字段（可多选）", all_columns, default=all_columns, key=f"merge_keep_{sheet}")
             sort_fields = st.multiselect("排序字段（可多选）", all_columns)
             preserve_format = st.checkbox("保留单元格格式", value=True)
             output_file = st.text_input("合并后文件名", value="合并结果.xlsx")
             if st.button("开始合并"):
                 with st.spinner("正在合并多个sheet..."):
                     config = ProcessingConfig(
-                        keep_fields=keep_fields,
+                        keep_fields=keep_fields_dict, # 使用字典传递给ProcessingConfig
                         sort_fields=sort_fields,
                         output_dir="output",
                         sheet_name=None,
@@ -349,6 +364,8 @@ elif mode == "合并多个小表为大表":
                             wb = openpyxl.load_workbook(file_path)
                             if sheet in wb.sheetnames:
                                 df = pd.read_excel(file_path, sheet_name=sheet)
+                                # 用各自sheet的保留字段
+                                keep_fields = keep_fields_dict.get(sheet, df.columns.tolist())
                                 if keep_fields:
                                     available_fields = [col for col in keep_fields if col in df.columns]
                                     df = df[available_fields]
