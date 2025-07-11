@@ -3,7 +3,21 @@ import tempfile
 import os
 import shutil
 from pathlib import Path
-from excel_processor_optimized import OptimizedExcelProcessor, ProcessingConfig, ProgressTracker
+import sys
+
+# 添加当前目录到Python路径，确保能找到模块
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+# 尝试导入核心处理器
+try:
+    from excel_processor_optimized import OptimizedExcelProcessor, ProcessingConfig, ProgressTracker
+except ImportError as e:
+    st.error(f"❌ 无法导入核心处理器模块: {e}")
+    st.error("请确保 excel_processor_optimized.py 文件在同一目录下")
+    st.stop()
+
 import pandas as pd
 import openpyxl
 from copy import copy
